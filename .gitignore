@@ -1,0 +1,6 @@
+target/
+*.jar
+*.class
+.env
+*.bak
+*.bak~
