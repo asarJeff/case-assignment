@@ -1,14 +1,17 @@
 package com.asar.caseassignment.sap;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class SapApiClient {
@@ -30,16 +33,12 @@ public class SapApiClient {
         this.password = stripQuotes(password);
     }
 
-    // ----------------------------
-    // GET
-    // ----------------------------
     @SuppressWarnings("unchecked")
     public Map<String, Object> get(String path, Map<String, String> queryParams) {
         String url = buildUrl(path, queryParams);
 
-        // (optional) helpful debug:
-        // System.out.println("Calling SAP: " + url);
-        // System.out.println("SAP queryParams: " + queryParams);
+        System.out.println("SAP GET URL: " + url);
+        System.out.println("SAP GET PARAMS: " + queryParams);
 
         HttpEntity<Void> entity = new HttpEntity<>(defaultHeaders());
         ResponseEntity<Map> resp = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
@@ -50,21 +49,17 @@ public class SapApiClient {
         return get(path, Map.of());
     }
 
-    // ----------------------------
-    // GET with ETag
-    // ----------------------------
     @SuppressWarnings("unchecked")
     public EtagResponse getWithEtag(String path, Map<String, String> queryParams) {
         String url = buildUrl(path, queryParams);
 
-        // (optional) helpful debug:
-        // System.out.println("Calling SAP (ETag): " + url);
-        // System.out.println("SAP queryParams: " + queryParams);
+        System.out.println("SAP GET (ETAG) URL: " + url);
+        System.out.println("SAP GET (ETAG) PARAMS: " + queryParams);
 
         HttpEntity<Void> entity = new HttpEntity<>(defaultHeaders());
         ResponseEntity<Map> resp = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
 
-        String etag = resp.getHeaders().getETag(); // may include quotes
+        String etag = resp.getHeaders().getETag();
         Map<String, Object> body = (Map<String, Object>) resp.getBody();
         return new EtagResponse(etag, body);
     }
@@ -73,11 +68,12 @@ public class SapApiClient {
         return getWithEtag(path, Map.of());
     }
 
-    // ----------------------------
-    // PATCH with If-Match
-    // ----------------------------
     public void patchWithIfMatch(String path, String etag, Map<String, Object> payload) {
         String url = buildUrl(path, Map.of());
+
+        System.out.println("SAP PATCH URL: " + url);
+        System.out.println("SAP PATCH ETAG: " + etag);
+        System.out.println("SAP PATCH PAYLOAD: " + payload);
 
         HttpHeaders h = defaultHeaders();
         if (etag != null && !etag.isBlank()) {
@@ -88,9 +84,6 @@ public class SapApiClient {
         restTemplate.exchange(url, HttpMethod.PATCH, entity, Map.class);
     }
 
-    // ----------------------------
-    // Headers
-    // ----------------------------
     private HttpHeaders defaultHeaders() {
         HttpHeaders h = new HttpHeaders();
         h.setAccept(List.of(MediaType.APPLICATION_JSON));
@@ -99,44 +92,23 @@ public class SapApiClient {
         return h;
     }
 
-    // ----------------------------
-    // URL building (CRITICAL FIX)
-    // ----------------------------
     private String buildUrl(String path, Map<String, String> queryParams) {
-        StringBuilder url = new StringBuilder();
-        url.append(baseUrl).append(path);
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromHttpUrl(baseUrl + path);
 
-        if (queryParams == null || queryParams.isEmpty()) {
-            return url.toString();
+        if (queryParams != null) {
+            for (Map.Entry<String, String> e : queryParams.entrySet()) {
+                String key = e.getKey();
+                String val = e.getValue();
+                if (key != null && val != null) {
+                    builder.queryParam(key, val);
+                }
+            }
         }
 
-        boolean first = true;
-        for (Map.Entry<String, String> e : queryParams.entrySet()) {
-            String key = e.getKey();
-            String val = e.getValue();
-            if (key == null || val == null) continue;
-
-            url.append(first ? "?" : "&");
-            first = false;
-            url.append(key).append("=").append(encodeValue(val));
-        }
-
-        return url.toString();
+        return builder.build(false).toUriString();
     }
 
-    private static String encodeValue(String s) {
-        StringBuilder result = new StringBuilder();
-        for (char c : s.toCharArray()) {
-            if (c == ' ') result.append("%20");
-            else if (c == '+') result.append("%2B");
-            else result.append(c);
-        }
-        return result.toString();
-    }
-   
-    // ----------------------------
-    // Helpers
-    // ----------------------------
     private static String stripTrailingSlash(String s) {
         if (s == null) return null;
         return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
