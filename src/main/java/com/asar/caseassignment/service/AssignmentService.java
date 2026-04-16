@@ -5,6 +5,7 @@ import java.util.*;
 import org.springframework.stereotype.Service;
 
 import com.asar.caseassignment.sap.SapApiClient;
+import com.asar.caseassignment.service.OrgUnitService;
 
 @Service
 public class AssignmentService {
@@ -13,17 +14,20 @@ public class AssignmentService {
     private final EmployeeQueryService employeeQueryService;
     private final WorkloadService workloadService;
     private final SapApiClient sap;
+    private final OrgUnitService orgUnitService;
 
     public AssignmentService(
             CaseQueryService caseQueryService,
             EmployeeQueryService employeeQueryService,
             WorkloadService workloadService,
-            SapApiClient sap
+            SapApiClient sap,
+            OrgUnitService orgUnitService
     ) {
         this.caseQueryService = caseQueryService;
         this.employeeQueryService = employeeQueryService;
         this.workloadService = workloadService;
         this.sap = sap;
+        this.orgUnitService = orgUnitService;
     }
 
     public List<Map<String, Object>> assignUnassignedCasesFairly() {
@@ -34,7 +38,7 @@ public class AssignmentService {
         Map<String, Integer> workload = workloadService.buildWorkloadFromCases(candidateCases);
 
         Map<String, List<Map<String, Object>>> employeesByTeam =
-                employeeQueryService.getEmployeesGroupedByOrgUnitId();
+                orgUnitService.getEmployeesByOrgUnitId();
 
         // Build a set of all manager IDs across all teams so we can exclude them
         Set<String> managerIds = buildManagerIdSet(employeesByTeam);

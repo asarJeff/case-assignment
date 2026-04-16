@@ -4,6 +4,7 @@ import java.util.*;
 import org.springframework.stereotype.Service;
 
 import com.asar.caseassignment.sap.SapApiClient;
+import com.asar.caseassignment.service.OrgUnitService;
 
 @Service
 public class CaseAssignmentService {
@@ -11,21 +12,24 @@ public class CaseAssignmentService {
     private final SapApiClient sap;
     private final CaseQueryService caseQueryService;
     private final EmployeeQueryService employeeQueryService;
+    private final OrgUnitService orgUnitService;
 
     public CaseAssignmentService(
             SapApiClient sap,
             CaseQueryService caseQueryService,
-            EmployeeQueryService employeeQueryService
+            EmployeeQueryService employeeQueryService,
+            OrgUnitService orgUnitService
     ) {
         this.sap = sap;
         this.caseQueryService = caseQueryService;
         this.employeeQueryService = employeeQueryService;
+        this.orgUnitService = orgUnitService;
     }
 
     public Map<String, Object> assignUnassignedCases() {
 
         Map<String, List<Map<String, Object>>> employeesByTeam =
-                employeeQueryService.getEmployeesGroupedByOrgUnitId();
+                orgUnitService.getEmployeesByOrgUnitId();
 
         List<Map<String, Object>> unassigned =
                 caseQueryService.getUnassignedOpenOrInProcessCases();
