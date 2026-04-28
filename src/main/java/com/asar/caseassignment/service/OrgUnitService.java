@@ -41,6 +41,10 @@ public class OrgUnitService {
                 String validTo = str(assign.get("validTo"));
                 if (!validTo.isBlank() && validTo.compareTo("2026") < 0) continue;
 
+                // Skip managers — only assign to employees (role 222 = Employee)
+                String role = str(assign.get("role"));
+                if (role.equals("218") || role.equals("210")) continue;
+
                 String empId = str(assign.get("employeeId"));
                 String empName = str(assign.get("employeeName"));
                 String empDisplayId = str(assign.get("employeeDisplayId"));
